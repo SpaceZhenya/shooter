@@ -3,37 +3,48 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Shooter</title>
+    <title>FIRESTORM — 3D Shooter</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
     <div id="blocker">
         <div id="instructions">
-            <h1>3D Shooter</h1>
-            <p>Нажми «Играть», чтобы начать</p>
-            <button id="startBtn">Играть</button>
+            <h1>FIRESTORM</h1>
+            <p class="subtitle">Тактический 3D шутер на выживание</p>
+            <button id="startBtn">Начать игру</button>
             <div id="controls">
-                <p><b>WASD</b> — движение</p>
-                <p><b>Мышь</b> — прицел</p>
-                <p><b>ЛКМ</b> — стрельба</p>
-                <p><b>R</b> — перезарядка</p>
+                <p><b>W A S D</b> &nbsp;—&nbsp; передвижение</p>
+                <p><b>Shift</b> &nbsp;—&nbsp; бег</p>
+                <p><b>ЛКМ</b> &nbsp;—&nbsp; стрельба</p>
+                <p><b>R</b> &nbsp;—&nbsp; перезарядка</p>
             </div>
         </div>
     </div>
 
     <div id="hud">
-        <div id="crosshair">+</div>
-        <div id="score">Очки: 0</div>
-        <div id="health">❤️ 100</div>
-        <div id="ammo">🔫 30 / 30</div>
-        <div id="wave">Волна: 1</div>
+        <div id="crosshair">
+            <div class="crosshair-dot"></div>
+            <div class="crosshair-line crosshair-top"></div>
+            <div class="crosshair-line crosshair-bottom"></div>
+            <div class="crosshair-line crosshair-left"></div>
+            <div class="crosshair-line crosshair-right"></div>
+        </div>
+        <div id="score"><span id="scoreVal">0</span> очков</div>
+        <div id="health-bar"><div id="health-fill"></div></div>
+        <div id="health">❤️ <span id="healthVal">100</span></div>
+        <div id="ammo"><span id="ammoVal">30</span> <span>/ 30</span></div>
+        <div id="wave">Волна <span id="waveVal">1</span></div>
         <div id="reload">ПЕРЕЗАРЯДКА...</div>
     </div>
 
+    <div id="damage-overlay"></div>
+
     <div id="gameOver">
-        <h1>ИГРА ОКОНЧЕНА</h1>
-        <p id="finalScore">Очки: 0</p>
-        <button id="restartBtn">Играть снова</button>
+        <h1>УБИТ</h1>
+        <p class="subtitle">Ваша вахта окончена</p>
+        <p>Набрано <span id="finalScore">0</span> очков</p>
+        <p style="font-size:16px;color:#666;margin-top:4px;">Волна <span id="finalWave">1</span></p>
+        <button id="restartBtn">Новый забег</button>
     </div>
 
     <script type="importmap">

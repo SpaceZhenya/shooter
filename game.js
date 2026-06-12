@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ─── DOM refs ────────────────────────────────────────────────
 const blocker = document.getElementById('blocker');
@@ -14,6 +15,7 @@ const gameOverEl = document.getElementById('gameOver');
 const finalScore = document.getElementById('finalScore');
 const finalWave = document.getElementById('finalWave');
 const dmgOverlay = document.getElementById('damage-overlay');
+const loadingInfo = document.getElementById('loading-info');
 
 // ─── Procedural textures ─────────────────────────────────────
 function makeGrassTexture() {
@@ -147,11 +149,6 @@ scene.add(moon);
 const hemi = new THREE.HemisphereLight(0x334488, 0x223322, 0.3);
 scene.add(hemi);
 
-// Volumetric light glow (fake)
-const glowLight = new THREE.PointLight(0xff4400, 1, 30);
-glowLight.position.set(0, 10, 0);
-scene.add(glowLight);
-
 // ─── Ground ──────────────────────────────────────────────────
 const groundGeo = new THREE.PlaneGeometry(180, 180, 1, 1);
 const groundMat = new THREE.MeshStandardMaterial({
@@ -182,7 +179,6 @@ function createBuilding(x, z, w, h, d, color) {
     mesh.receiveShadow = true;
     group.add(mesh);
 
-    // Roof
     const roofMat = new THREE.MeshStandardMaterial({ color: 0x444455, roughness: 0.9 });
     const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, 0.2, d + 0.4), roofMat);
     roof.position.y = h / 2 + 0.1;
@@ -197,7 +193,7 @@ function createBuilding(x, z, w, h, d, color) {
     return group;
 }
 
-function createCrate(x, z, size, color) {
+function createCrate(x, z, size) {
     const geo = new THREE.BoxGeometry(size, size, size);
     const mat = new THREE.MeshStandardMaterial({ map: crateTex, roughness: 0.9 });
     const mesh = new THREE.Mesh(geo, mat);
@@ -304,25 +300,19 @@ createBuilding(-28, -28, 10, 6, 10, 0x777788);
 createBuilding(28, -28, 10, 6, 10, 0x777788);
 createBuilding(-28, 28, 10, 6, 10, 0x777788);
 createBuilding(28, 28, 10, 6, 10, 0x777788);
-
 createBuilding(0, -36, 14, 3.5, 5, 0x887766);
 createBuilding(0, 36, 14, 3.5, 5, 0x887766);
 createBuilding(-38, 0, 5, 3.5, 14, 0x887766);
 createBuilding(38, 0, 5, 3.5, 14, 0x887766);
-
-// Center structure
 createBuilding(0, 0, 6, 4, 6, 0x666688);
 
 const cratePos = [
     [-16, -16], [16, -16], [-16, 16], [16, 16],
     [-30, -10], [30, 10], [10, -30], [-10, 30],
     [-30, 15], [30, -15], [15, 30], [-15, -30],
+    [-8, -8], [8, 8], [-8, 8], [8, -8],
 ];
-for (const [x, z] of cratePos) createCrate(x, z, 0.8, 0xcc8844);
-createCrate(-8, -8, 0.6, 0xcc8844);
-createCrate(8, 8, 0.6, 0xcc8844);
-createCrate(-8, 8, 0.6, 0xcc8844);
-createCrate(8, -8, 0.6, 0xcc8844);
+for (const [x, z] of cratePos) createCrate(x, z, 0.8);
 
 const treePos = [
     [-40, -40], [40, -40], [-40, 40], [40, 40],
@@ -353,40 +343,33 @@ function buildWeapon() {
     const mat = (color, roughness = 0.4, metalness = 0.6) =>
         new THREE.MeshStandardMaterial({ color, roughness, metalness });
 
-    // Body
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.28), mat(0x222233));
     body.position.set(0, -0.05, -0.14);
     weaponGroup.add(body);
 
-    // Barrel
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.18, 8), mat(0x111122, 0.3, 0.8));
     barrel.rotation.x = Math.PI / 2;
     barrel.position.set(0, -0.05, -0.28);
     weaponGroup.add(barrel);
 
-    // Barrel tip
     const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.012, 0.04, 8), mat(0x222233, 0.3, 0.7));
     tip.rotation.x = Math.PI / 2;
     tip.position.set(0, -0.05, -0.37);
     weaponGroup.add(tip);
 
-    // Slide
     const slide = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.16), mat(0x333344, 0.4, 0.7));
     slide.position.set(0, -0.02, -0.14);
     weaponGroup.add(slide);
 
-    // Grip
     const grip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.1, 0.06), mat(0x332211, 0.8));
     grip.position.set(0, -0.12, 0.04);
     grip.rotation.x = 0.2;
     weaponGroup.add(grip);
 
-    // Trigger guard
     const guard = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.03), mat(0x222233, 0.5, 0.6));
     guard.position.set(0, -0.09, -0.02);
     weaponGroup.add(guard);
 
-    // Sight front
     const sight = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.015, 0.004), mat(0xff4400, 0.3, 0.5));
     sight.position.set(0, 0.01, -0.18);
     sight.material.emissive = new THREE.Color(0xff4400);
@@ -398,6 +381,232 @@ buildWeapon();
 weaponGroup.position.set(0.3, -0.2, -0.35);
 camera.add(weaponGroup);
 scene.add(camera);
+
+// ─── Load GLTF human models ──────────────────────────────────
+let loadedHumanModels = [];
+let modelsReady = false;
+
+const MODEL_URLS = [
+    'https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.gltf',
+];
+
+const skinTones = [
+    0xf5d0a9, 0xdeb887, 0xc68642, 0x8d5524,
+    0xe8c492, 0xd4a574, 0xbe7c4a, 0xa0522d,
+];
+
+const shirtColors = [
+    0xffffff, 0xcccccc, 0x888888, 0x444444,
+    0x2244aa, 0xaa2222, 0x22aa44, 0x222222,
+    0x8B4513, 0x2F4F4F, 0x800020, 0x556B2F,
+];
+
+const pantsColors = [
+    0x2F4F4F, 0x333344, 0x444444, 0x555555,
+    0x1a1a2e, 0x3B3B3B, 0x4a4a4a, 0x2a2a3a,
+];
+
+const shoeColors = [0x1a1a1a, 0x333333, 0x3a2a1a, 0xffffff];
+
+function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function loadHumanModels() {
+    const loader = new GLTFLoader();
+    let loaded = 0;
+
+    for (const url of MODEL_URLS) {
+        loader.load(url, (gltf) => {
+            const model = gltf.scene;
+            model.scale.set(0.55, 0.55, 0.55);
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            loadedHumanModels.push(model);
+            loaded++;
+            if (loaded >= MODEL_URLS.length) {
+                modelsReady = true;
+                loadingInfo.textContent = '✓ Модели загружены!';
+                loadingInfo.style.color = '#4a4';
+            }
+        }, undefined, () => {
+            loaded++;
+            if (loaded >= MODEL_URLS.length) {
+                loadingInfo.textContent = '✓ Используются процедурные модели';
+                loadingInfo.style.color = '#884';
+            }
+        });
+    }
+}
+
+loadHumanModels();
+
+// ─── Procedural human model (fallback) ───────────────────────
+function createProceduralHuman() {
+    const group = new THREE.Group();
+    const skin = pickRandom(skinTones);
+    const shirt = pickRandom(shirtColors);
+    const pants = pickRandom(pantsColors);
+    const shoes = pickRandom(shoeColors);
+
+    const mat = (color, rough = 0.6, metal = 0.1, emit = null, ei = 0) => {
+        const m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
+        if (emit) { m.emissive = new THREE.Color(emit); m.emissiveIntensity = ei; }
+        return m;
+    };
+
+    // Feet / shoes
+    const shoeMat = mat(shoes, 0.8);
+    const footL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.18), shoeMat);
+    footL.position.set(-0.12, 0.025, 0.04);
+    footL.castShadow = true;
+    group.add(footL);
+    const footR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.18), shoeMat);
+    footR.position.set(0.12, 0.025, 0.04);
+    footR.castShadow = true;
+    group.add(footR);
+
+    // Legs
+    const pantsMat = mat(pants, 0.7);
+    const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.55, 7), pantsMat);
+    legL.position.set(-0.12, 0.3, 0);
+    legL.castShadow = true;
+    group.add(legL);
+    const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.55, 7), pantsMat);
+    legR.position.set(0.12, 0.3, 0);
+    legR.castShadow = true;
+    group.add(legR);
+
+    // Torso
+    const shirtMat = mat(shirt, 0.5);
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.5, 8), shirtMat);
+    torso.position.y = 0.8;
+    torso.castShadow = true;
+    group.add(torso);
+
+    // Shoulders
+    const shoulderMat = mat(shirt, 0.5);
+    const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), shoulderMat);
+    shoulderL.position.set(-0.28, 1.0, 0);
+    group.add(shoulderL);
+    const shoulderR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), shoulderMat);
+    shoulderR.position.set(0.28, 1.0, 0);
+    group.add(shoulderR);
+
+    // Arms
+    const skinMat = mat(skin, 0.5);
+    const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.45, 6), skinMat);
+    armL.position.set(-0.32, 0.78, 0);
+    armL.rotation.z = 0.15;
+    armL.castShadow = true;
+    group.add(armL);
+    const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.45, 6), skinMat);
+    armR.position.set(0.32, 0.78, 0);
+    armR.rotation.z = -0.15;
+    armR.castShadow = true;
+    group.add(armR);
+
+    // Hands
+    const handMat = mat(skin, 0.5);
+    const handL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 5, 5), handMat);
+    handL.position.set(-0.34, 0.55, 0);
+    group.add(handL);
+    const handR = new THREE.Mesh(new THREE.SphereGeometry(0.035, 5, 5), handMat);
+    handR.position.set(0.34, 0.55, 0);
+    group.add(handR);
+
+    // Neck
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.08, 6), skinMat);
+    neck.position.y = 1.08;
+    group.add(neck);
+
+    // Head
+    const headMat = mat(skin, 0.4);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), headMat);
+    head.position.y = 1.2;
+    head.castShadow = true;
+    group.add(head);
+
+    // Hair
+    const hairMat = mat(pickRandom([0x1a1a1a, 0x2a1a0a, 0x3a2a1a, 0x4a3a2a, 0xa08050, 0xc0a060, 0xd4b070]), 0.7);
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.145, 7, 7, 0, Math.PI * 2, 0, Math.PI * 0.5), hairMat);
+    hair.position.y = 1.24;
+    group.add(hair);
+
+    // Eyes
+    const eyeMat = mat(0xffffff, 0.1);
+    const pupilMat = mat(0x222222, 0.1);
+    for (const side of [-1, 1]) {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), eyeMat);
+        eye.position.set(side * 0.06, 1.22, -0.12);
+        group.add(eye);
+        const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.015, 5, 5), pupilMat);
+        pupil.position.set(side * 0.06, 1.22, -0.09);
+        group.add(pupil);
+    }
+
+    // Eyebrows
+    const browMat = mat(hairMat.color.getHex(), 0.7);
+    for (const side of [-1, 1]) {
+        const brow = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.008, 0.008), browMat);
+        brow.position.set(side * 0.06, 1.26, -0.13);
+        group.add(brow);
+    }
+
+    // Mouth
+    const mouthMat = mat(0xcc8888, 0.5);
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.005, 0.01), mouthMat);
+    mouth.position.set(0, 1.16, -0.13);
+    group.add(mouth);
+
+    return { group, skin, shirt, pants, skinMat, shirtMat, pantsMat, headMat, bodyMat: shirtMat };
+}
+
+// ─── Apply colors to GLTF model ─────────────────────────────
+function applyModelColors(model) {
+    const skin = pickRandom(skinTones);
+    const shirt = pickRandom(shirtColors);
+    const pants = pickRandom(pantsColors);
+    const shoes = pickRandom(shoeColors);
+
+    const mats = [];
+    model.traverse((child) => {
+        if (child.isMesh) {
+            const name = child.name ? child.name.toLowerCase() : '';
+            let color = 0x888888;
+            if (name.includes('head') || name.includes('face') || name.includes('neck') || name.includes('hand') || name.includes('arm')) {
+                color = skin;
+            } else if (name.includes('body') || name.includes('torso') || name.includes('shirt') || name.includes('upper') || name.includes('coat')) {
+                color = shirt;
+            } else if (name.includes('leg') || name.includes('pant') || name.includes('hip') || name.includes('thigh')) {
+                color = pants;
+            } else if (name.includes('foot') || name.includes('shoe') || name.includes('boot')) {
+                color = shoes;
+            }
+            child.material = child.material.clone();
+            child.material.color.setHex(color);
+            child.material.roughness = 0.6;
+            child.material.metalness = 0.1;
+            mats.push(child.material);
+        }
+    });
+    return mats;
+}
+
+// ─── Choose model source ─────────────────────────────────────
+function createEnemyModel() {
+    if (modelsReady && loadedHumanModels.length > 0) {
+        const src = loadedHumanModels[Math.floor(Math.random() * loadedHumanModels.length)];
+        const clone = src.clone(true);
+        const mats = applyModelColors(clone);
+        return { group: clone, materials: mats };
+    }
+    return createProceduralHuman();
+}
 
 // ─── Ambient particles ───────────────────────────────────────
 const ambientParticles = [];
@@ -431,53 +640,28 @@ const particles = [];
 function spawnParticles(pos, color, count, speed, lifetime, size) {
     for (let i = 0; i < count; i++) {
         const s = size || (0.03 + Math.random() * 0.05);
-        const mat = new THREE.MeshBasicMaterial({
-            color,
-            transparent: true,
-            opacity: 1,
-            depthWrite: false,
-        });
+        const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1, depthWrite: false });
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(s, 4, 4), mat);
         mesh.position.copy(pos);
         const dir = new THREE.Vector3(
-            (Math.random() - 0.5) * 2,
-            Math.random() * 1.5,
-            (Math.random() - 0.5) * 2
+            (Math.random() - 0.5) * 2, Math.random() * 1.5, (Math.random() - 0.5) * 2
         ).normalize().multiplyScalar(speed * (0.5 + Math.random()));
-        mesh.userData = {
-            vel: dir,
-            life: lifetime || 0.5 + Math.random() * 0.5,
-            maxLife: lifetime || 0.5 + Math.random() * 0.5,
-            gravity: 1.5,
-        };
+        mesh.userData = { vel: dir, life: lifetime || 0.5 + Math.random() * 0.5, maxLife: lifetime || 0.5 + Math.random() * 0.5, gravity: 1.5 };
         scene.add(mesh);
         particles.push(mesh);
     }
 }
 
 function spawnHitSparks(pos, normal) {
-    const count = 6 + Math.floor(Math.random() * 4);
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < 8; i++) {
         const s = 0.01 + Math.random() * 0.02;
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0xffff88,
-            transparent: true,
-            opacity: 1,
-            depthWrite: false,
-        });
+        const mat = new THREE.MeshBasicMaterial({ color: 0xffff88, transparent: true, opacity: 1, depthWrite: false });
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(s, 4, 4), mat);
         mesh.position.copy(pos).add(normal.clone().multiplyScalar(0.05));
         const dir = normal.clone().add(new THREE.Vector3(
-            (Math.random() - 0.5) * 0.8,
-            (Math.random() - 0.5) * 0.8,
-            (Math.random() - 0.5) * 0.8
+            (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8
         )).normalize().multiplyScalar(1.5 + Math.random() * 3);
-        mesh.userData = {
-            vel: dir,
-            life: 0.2 + Math.random() * 0.3,
-            maxLife: 0.2 + Math.random() * 0.3,
-            gravity: 4,
-        };
+        mesh.userData = { vel: dir, life: 0.2 + Math.random() * 0.3, maxLife: 0.2 + Math.random() * 0.3, gravity: 4 };
         scene.add(mesh);
         particles.push(mesh);
     }
@@ -488,78 +672,45 @@ function spawnBlood(pos) {
         const s = 0.03 + Math.random() * 0.06;
         const mat = new THREE.MeshBasicMaterial({
             color: new THREE.Color().setHSL(0, 0.7 + Math.random() * 0.3, 0.15 + Math.random() * 0.15),
-            transparent: true,
-            opacity: 0.9,
-            depthWrite: false,
+            transparent: true, opacity: 0.9, depthWrite: false,
         });
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(s, 4, 4), mat);
         mesh.position.copy(pos);
         const dir = new THREE.Vector3(
-            (Math.random() - 0.5) * 2,
-            Math.random() * 1.5 + 0.5,
-            (Math.random() - 0.5) * 2
+            (Math.random() - 0.5) * 2, Math.random() * 1.5 + 0.5, (Math.random() - 0.5) * 2
         ).normalize().multiplyScalar(1 + Math.random() * 2);
-        mesh.userData = {
-            vel: dir,
-            life: 0.6 + Math.random() * 0.6,
-            maxLife: 0.6 + Math.random() * 0.6,
-            gravity: 3,
-        };
+        mesh.userData = { vel: dir, life: 0.6 + Math.random() * 0.6, maxLife: 0.6 + Math.random() * 0.6, gravity: 3 };
         scene.add(mesh);
         particles.push(mesh);
     }
 }
 
 function spawnExplosion(pos) {
-    // Fireball
     for (let i = 0; i < 20; i++) {
         const s = 0.05 + Math.random() * 0.15;
         const hue = 0.04 + Math.random() * 0.1;
         const mat = new THREE.MeshBasicMaterial({
             color: new THREE.Color().setHSL(hue, 1, 0.4 + Math.random() * 0.4),
-            transparent: true,
-            opacity: 1,
-            depthWrite: false,
+            transparent: true, opacity: 1, depthWrite: false,
         });
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(s, 5, 5), mat);
         mesh.position.copy(pos);
         const dir = new THREE.Vector3(
-            (Math.random() - 0.5) * 2.5,
-            Math.random() * 2,
-            (Math.random() - 0.5) * 2.5
+            (Math.random() - 0.5) * 2.5, Math.random() * 2, (Math.random() - 0.5) * 2.5
         ).normalize().multiplyScalar(2 + Math.random() * 4);
-        mesh.userData = {
-            vel: dir,
-            life: 0.4 + Math.random() * 0.6,
-            maxLife: 0.4 + Math.random() * 0.6,
-            gravity: 2,
-        };
+        mesh.userData = { vel: dir, life: 0.4 + Math.random() * 0.6, maxLife: 0.4 + Math.random() * 0.6, gravity: 2 };
         scene.add(mesh);
         particles.push(mesh);
     }
-    // Smoke
     for (let i = 0; i < 10; i++) {
         const s = 0.1 + Math.random() * 0.2;
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0x444444,
-            transparent: true,
-            opacity: 0.4,
-            depthWrite: false,
-        });
+        const mat = new THREE.MeshBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.4, depthWrite: false });
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(s, 5, 5), mat);
         mesh.position.copy(pos);
         const dir = new THREE.Vector3(
-            (Math.random() - 0.5) * 1.5,
-            Math.random() * 2 + 0.5,
-            (Math.random() - 0.5) * 1.5
+            (Math.random() - 0.5) * 1.5, Math.random() * 2 + 0.5, (Math.random() - 0.5) * 1.5
         ).normalize().multiplyScalar(1 + Math.random() * 2);
-        mesh.userData = {
-            vel: dir,
-            life: 0.8 + Math.random() * 0.8,
-            maxLife: 0.8 + Math.random() * 0.8,
-            gravity: -0.5,
-            fade: true,
-        };
+        mesh.userData = { vel: dir, life: 0.8 + Math.random() * 0.8, maxLife: 0.8 + Math.random() * 0.8, gravity: -0.5, fade: true };
         scene.add(mesh);
         particles.push(mesh);
     }
@@ -584,7 +735,6 @@ const player = {
     isRunning: false,
     bobPhase: 0,
     bobAmount: 0,
-    weaponBob: new THREE.Vector3(),
 };
 
 let pitch = 0;
@@ -611,110 +761,41 @@ function playSound(type) {
         initAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        osc.connect(gain); gain.connect(audioCtx.destination);
         const t = audioCtx.currentTime;
         switch (type) {
             case 'shoot':
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(900, t);
-                osc.frequency.exponentialRampToValueAtTime(150, t + 0.06);
-                gain.gain.setValueAtTime(0.08, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+                osc.frequency.setValueAtTime(900, t); osc.frequency.exponentialRampToValueAtTime(150, t + 0.06);
+                gain.gain.setValueAtTime(0.08, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
                 osc.start(t); osc.stop(t + 0.06);
                 break;
             case 'hit':
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(200, t);
-                osc.frequency.exponentialRampToValueAtTime(60, t + 0.08);
-                gain.gain.setValueAtTime(0.06, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+                osc.frequency.setValueAtTime(200, t); osc.frequency.exponentialRampToValueAtTime(60, t + 0.08);
+                gain.gain.setValueAtTime(0.06, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
                 osc.start(t); osc.stop(t + 0.08);
-                break;
-            case 'reload':
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(300, t);
-                osc.frequency.setValueAtTime(500, t + 0.08);
-                osc.frequency.setValueAtTime(700, t + 0.16);
-                gain.gain.setValueAtTime(0.04, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-                osc.start(t); osc.stop(t + 0.25);
                 break;
             case 'kill':
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(300, t);
-                osc.frequency.exponentialRampToValueAtTime(40, t + 0.4);
-                gain.gain.setValueAtTime(0.1, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+                osc.frequency.setValueAtTime(300, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+                gain.gain.setValueAtTime(0.1, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
                 osc.start(t); osc.stop(t + 0.4);
                 break;
             case 'hurt':
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(150, t);
-                osc.frequency.exponentialRampToValueAtTime(60, t + 0.2);
-                gain.gain.setValueAtTime(0.15, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+                osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(60, t + 0.2);
+                gain.gain.setValueAtTime(0.15, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
                 osc.start(t); osc.stop(t + 0.2);
                 break;
         }
     } catch(e) {}
 }
 
-// ─── Enemy model ─────────────────────────────────────────────
+// ─── Create enemy ────────────────────────────────────────────
 function createEnemy() {
-    const group = new THREE.Group();
-    const mat = (color, rough = 0.6, metal = 0.1, emissive = null, ei = 0) => {
-        const m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
-        if (emissive) { m.emissive = new THREE.Color(emissive); m.emissiveIntensity = ei; }
-        return m;
-    };
+    const { group, materials } = createEnemyModel();
 
-    // Legs
-    const legMat = mat(0x331111, 0.7);
-    const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.5, 6), legMat);
-    legL.position.set(-0.13, 0.25, 0);
-    legL.castShadow = true;
-    group.add(legL);
-    const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.5, 6), legMat);
-    legR.position.set(0.13, 0.25, 0);
-    legR.castShadow = true;
-    group.add(legR);
-
-    // Body
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 0.6, 7), mat(0x881111, 0.6));
-    body.position.y = 0.65;
-    body.castShadow = true;
-    group.add(body);
-
-    // Head
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 7), mat(0xaa2222, 0.5));
-    head.position.y = 1.15;
-    head.castShadow = true;
-    group.add(head);
-
-    // Eyes (glowing)
-    const eyeMat = mat(0xff4400, 0.3, 0, 0xff4400, 0.5);
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), eyeMat);
-    eye1.position.set(-0.09, 1.18, -0.18);
-    group.add(eye1);
-    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), eyeMat);
-    eye2.position.set(0.09, 1.18, -0.18);
-    group.add(eye2);
-
-    // Arms
-    const armMat = mat(0x661111, 0.7);
-    const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.4, 5), armMat);
-    armL.position.set(-0.3, 0.7, 0);
-    armL.rotation.z = 0.3;
-    armL.castShadow = true;
-    group.add(armL);
-    const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.4, 5), armMat);
-    armR.position.set(0.3, 0.7, 0);
-    armR.rotation.z = -0.3;
-    armR.castShadow = true;
-    group.add(armR);
-
-    // spawn pos
     let x, z;
     do {
         const angle = Math.random() * Math.PI * 2;
@@ -737,10 +818,7 @@ function createEnemy() {
         attackRange: 1.8,
         attackCooldown: 1200,
         lastAttack: 0,
-        bodyMat: body.material,
-        headMat: head.material,
-        origBodyColor: 0x881111,
-        origHeadColor: 0xaa2222,
+        materials: materials || [],
     });
     enemiesAlive++;
 }
@@ -765,35 +843,25 @@ function checkCollision(pos, r = 0.35) {
     return false;
 }
 
-// ─── Muzzle flash ────────────────────────────────────────────
+// ─── Shooting effects ────────────────────────────────────────
 function createMuzzleFlash() {
     const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     const pos = camera.position.clone().add(dir.multiplyScalar(0.7));
     spawnParticles(pos, 0xffaa44, 5, 3, 0.15, 0.03);
-    spawnParticles(pos, 0xff4400, 3, 2, 0.1, 0.02);
 
-    // Flash sprite
     const flash = new THREE.Mesh(
         new THREE.PlaneGeometry(0.4, 0.4),
         new THREE.MeshBasicMaterial({
-            color: 0xffff88,
-            transparent: true,
-            opacity: 0.7,
-            depthWrite: false,
-            side: THREE.DoubleSide,
-            blending: THREE.AdditiveBlending,
+            color: 0xffff88, transparent: true, opacity: 0.7,
+            depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
         })
     );
     flash.position.copy(camera.position).add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(0.55));
     flash.lookAt(camera.position);
     scene.add(flash);
-    setTimeout(() => {
-        flash.material.opacity = 0;
-        setTimeout(() => scene.remove(flash), 50);
-    }, 30);
+    setTimeout(() => { flash.material.opacity = 0; setTimeout(() => scene.remove(flash), 50); }, 30);
 }
 
-// ─── Bullet holes ────────────────────────────────────────────
 const bulletHoles = [];
 function createBulletHole(point, normal) {
     const hole = new THREE.Mesh(
@@ -822,22 +890,25 @@ function shoot() {
 
     raycaster.setFromCamera({ x: 0, y: 0 }, camera);
 
-    // Check enemies
     let hit = false;
     for (const enemy of enemies) {
-        const meshes = enemy.mesh.children.filter(c => c.isMesh);
+        const meshes = [];
+        enemy.mesh.traverse((c) => { if (c.isMesh) meshes.push(c); });
         const intersects = raycaster.intersectObjects(meshes);
         if (intersects.length > 0) {
             enemy.health -= player.damage;
             hit = true;
             spawnBlood(intersects[0].point);
             playSound('hit');
-            // Flash white
-            enemy.bodyMat.color.setHex(0xffffff);
-            enemy.headMat.color.setHex(0xffffff);
+            // White flash on all materials
+            for (const m of enemy.materials) {
+                m._origColor = m._origColor || m.color.getHex();
+                m.color.setHex(0xffffff);
+            }
             setTimeout(() => {
-                if (enemy.bodyMat.color) enemy.bodyMat.color.setHex(enemy.origBodyColor);
-                if (enemy.headMat.color) enemy.headMat.color.setHex(enemy.origHeadColor);
+                for (const m of enemy.materials) {
+                    if (m.color && m._origColor) m.color.setHex(m._origColor);
+                }
             }, 60);
             if (enemy.health <= 0) { killEnemy(enemy); break; }
         }
@@ -867,7 +938,6 @@ function startReload() {
     if (player.reloading || player.ammo === player.maxAmmo) return;
     player.reloading = true;
     reloadEl.style.display = 'block';
-    playSound('reload');
     setTimeout(() => {
         player.ammo = player.maxAmmo;
         player.reloading = false;
@@ -897,18 +967,14 @@ function gameOver() {
 
 function resetGame() {
     for (const e of enemies) scene.remove(e.mesh);
-    enemies.length = 0;
-    enemiesAlive = 0;
-    wave = 1;
+    enemies.length = 0; enemiesAlive = 0; wave = 1;
     for (const h of bulletHoles) scene.remove(h);
     bulletHoles.length = 0;
     for (const p of particles) scene.remove(p);
     particles.length = 0;
 
-    player.health = player.maxHealth;
-    player.score = 0;
-    player.ammo = player.maxAmmo;
-    player.reloading = false;
+    player.health = player.maxHealth; player.score = 0;
+    player.ammo = player.maxAmmo; player.reloading = false;
     player.position.set(0, 1.7, 0);
     camera.position.set(0, 1.7, 0);
     pitch = 0; yaw = 0;
@@ -981,10 +1047,7 @@ function animate() {
         p.userData.life -= delta;
         p.position.add(p.userData.vel.clone().multiplyScalar(delta));
         p.material.opacity = Math.max(0, (p.userData.life / p.userData.maxLife) * 0.2);
-        if (p.userData.life <= 0) {
-            scene.remove(p);
-            ambientParticles.splice(i, 1);
-        }
+        if (p.userData.life <= 0) { scene.remove(p); ambientParticles.splice(i, 1); }
     }
     while (ambientParticles.length < 80) createAmbientParticle();
 
@@ -1017,7 +1080,6 @@ function animate() {
         }
 
         camera.position.copy(player.position);
-
         const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
         camera.quaternion.setFromEuler(euler);
 
@@ -1027,7 +1089,6 @@ function animate() {
         weaponGroup.position.x = 0.3 + bobX;
         weaponGroup.position.y = -0.2 + bobY;
 
-        // ── View kick when shooting ──
         const kickT = (Date.now() - player.lastShot) / 200;
         if (kickT < 1) {
             const k = (1 - kickT);

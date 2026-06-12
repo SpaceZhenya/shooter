@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Shooter</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="blocker">
+        <div id="instructions">
+            <h1>3D Shooter</h1>
+            <p>Нажми «Играть», чтобы начать</p>
+            <button id="startBtn">Играть</button>
+            <div id="controls">
+                <p><b>WASD</b> — движение</p>
+                <p><b>Мышь</b> — прицел</p>
+                <p><b>ЛКМ</b> — стрельба</p>
+                <p><b>R</b> — перезарядка</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div id="crosshair">+</div>
+        <div id="score">Очки: 0</div>
+        <div id="health">❤️ 100</div>
+        <div id="ammo">🔫 30 / 30</div>
+        <div id="wave">Волна: 1</div>
+        <div id="reload">ПЕРЕЗАРЯДКА...</div>
+    </div>
+
+    <div id="gameOver">
+        <h1>ИГРА ОКОНЧЕНА</h1>
+        <p id="finalScore">Очки: 0</p>
+        <button id="restartBtn">Играть снова</button>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="game.js"></script>
+</body>
+</html>

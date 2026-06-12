@@ -563,7 +563,8 @@ function createProceduralHuman() {
     mouth.position.set(0, 1.16, -0.13);
     group.add(mouth);
 
-    return { group, skin, shirt, pants, skinMat, shirtMat, pantsMat, headMat, bodyMat: shirtMat };
+    const allMats = [shirtMat, pantsMat, skinMat, headMat, shoeMat, browMat, mouthMat, hairMat, eyeMat, pupilMat, shoulderMat, handMat, legL.material, legR.material, armL.material, armR.material];
+    return { group, materials: allMats };
 }
 
 // ─── Apply colors to GLTF model ─────────────────────────────
